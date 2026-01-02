@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OMGTube - Вход/Регистрация</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Arial;
+            background: linear-gradient(135deg, #0f0f0f, #212121);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .auth-container {
+            background: rgba(33, 33, 33, 0.95);
+            padding: 40px;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 10px 30px rgba(255, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+        }
+        
+        .logo {
+            text-align: center;
+            font-size: 36px;
+            font-weight: bold;
+            color: #ff0000;
+            margin-bottom: 30px;
+        }
+        
+        .tabs {
+            display: flex;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #383838;
+        }
+        
+        .tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+        }
+        
+        .tab.active {
+            color: #ff0000;
+            border-bottom-color: #ff0000;
+            font-weight: bold;
+        }
+        
+        .form {
+            display: none;
+        }
+        
+        .form.active {
+            display: block;
+        }
+        
+        .form input {
+            width: 100%;
+            padding: 15px;
+            margin-bottom: 20px;
+            background: rgba(18, 18, 18, 0.8);
+            border: 2px solid #383838;
+            border-radius: 10px;
+            color: white;
+            font-size: 16px;
+            transition: border 0.3s;
+        }
+        
+        .form input:focus {
+            outline: none;
+            border-color: #ff0000;
+        }
+        
+        .form button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(45deg, #ff0000, #ff5252);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .form button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 0, 0, 0.4);
+        }
+        
+        .error-message {
+            color: #ff4444;
+            margin: 10px 0;
+            text-align: center;
+            min-height: 20px;
+        }
+        
+        .success-message {
+            color: #44ff44;
+            margin: 10px 0;
+            text-align: center;
+            min-height: 20px;
+        }
+        
+        .back-link {
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .back-link a {
+            color: #aaa;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        
+        .back-link a:hover {
+            color: white;
+        }
+        
+        /* Анимации */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .auth-container {
+            animation: fadeIn 0.5s ease-out;
+        }
+        
+        /* Адаптивность */
+        @media (max-width: 480px) {
+            .auth-container {
+                margin: 20px;
+                padding: 30px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="logo">OMGTube</div>
+        
+        <div class="tabs">
+            <div class="tab active" onclick="showTab('login')">Вход</div>
+            <div class="tab" onclick="showTab('register')">Регистрация</div>
+        </div>
+        
+        <!-- Форма входа -->
+        <form id="login-form" class="form active">
+            <input type="email" id="login-email" placeholder="Email" required>
+            <input type="password" id="login-password" placeholder="Пароль" required>
+            <div class="error-message" id="login-error"></div>
+            <button type="submit">Войти</button>
+        </form>
+        
+        <!-- Форма регистрации -->
+        <form id="register-form" class="form">
+            <input type="email" id="register-email" placeholder="Email" required>
+            <input type="password" id="register-password" placeholder="Пароль (минимум 6 символов)" required>
+            <input type="text" id="register-username" placeholder="Имя пользователя" required>
+            <div class="error-message" id="register-error"></div>
+            <div class="success-message" id="register-success"></div>
+            <button type="submit">Создать аккаунт</button>
+        </form>
+        
+        <div class="back-link">
+            <a href="index.html">← Вернуться на главную</a>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Инициализация Supabase
+        const SUPABASE_URL = 'https://sbrbed72ad5k3gr9di_uug.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_sBrBED72Ad5k3GR9DI_uUg_-AwTf8LA';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        // Переключение между вкладками
+        function showTab(tabName) {
+            // Скрыть все формы
+            document.querySelectorAll('.form').forEach(form => {
+                form.classList.remove('active');
+            });
+            
+            // Убрать активный класс у всех вкладок
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Показать выбранную форму
+            document.getElementById(`${tabName}-form`).classList.add('active');
+            
+            // Активировать выбранную вкладку
+            event.target.classList.add('active');
+        }
+        
+        // Обработка входа
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            const errorElement = document.getElementById('login-error');
+            
+            errorElement.textContent = '';
+            
+            try {
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email,
+                    password
+                });
+                
+                if (error) throw error;
+                
+                // Перенаправление на главную
+                window.location.href = 'index.html';
+                
+            } catch (error) {
+                errorElement.textContent = error.message || 'Ошибка входа';
+            }
+        });
+        
+        // Обработка регистрации
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+            const username = document.getElementById('register-username').value;
+            
+            const errorElement = document.getElementById('register-error');
+            const successElement = document.getElementById('register-success');
+            
+            errorElement.textContent = '';
+            successElement.textContent = '';
+            
+            // Валидация
+            if (password.length < 6) {
+                errorElement.textContent = 'Пароль должен быть не менее 6 символов';
+                return;
+            }
+            
+            if (username.length < 3) {
+                errorElement.textContent = 'Имя пользователя должно быть не менее 3 символов';
+                return;
+            }
+            
+            try {
+                // 1. Регистрация в Supabase Auth
+                const { data: authData, error: authError } = await supabase.auth.signUp({
+                    email,
+                    password,
+                    options: {
+                        data: { username }
+                    }
+                });
+                
+                if (authError) throw authError;
+                
+                // 2. Создание профиля в базе данных
+                const { error: profileError } = await supabase
+                    .from('profiles')
+                    .insert([{
+                        id: authData.user.id,
+                        username: username,
+                        avatar_url: `https://ui-avatars.com/api/?name=${username}&background=FF0000&color=fff`,
+                        subscribers_count: 0
+                    }]);
+                
+                if (profileError) {
+                    // Если ошибка при создании профиля, удаляем пользователя
+                    await supabase.auth.signOut();
+                    throw profileError;
+                }
+                
+                // Успешная регистрация
+                successElement.textContent = '✅ Аккаунт создан! Вы будете перенаправлены...';
+                
+                // Автоматический вход
+                setTimeout(async () => {
+                    await supabase.auth.signInWithPassword({ email, password });
+                    window.location.href = 'index.html';
+                }, 2000);
+                
+            } catch (error) {
+                errorElement.textContent = error.message || 'Ошибка регистрации';
+            }
+        });
+        
+        // Проверка авторизации при загрузке
+        document.addEventListener('DOMContentLoaded', async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+                window.location.href = 'index.html';
+            }
+        });
+    </script>
+</body>
+</html>
